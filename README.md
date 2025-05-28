@@ -1,6 +1,6 @@
 # Student Score Predictor 🚀
 
-Predict student scores for seven subjects using Random Forest models. Features a modern React frontend with a vibrant UI, enhanced batch predictions, and a Flask backend.
+Predict student scores for seven subjects using Random Forest models. Features a modern frontend with a vibrant UI, enhanced batch predictions, and a Flask backend.
 
 ## Features
 - 📈 Single predictions with bar and radar charts
@@ -59,7 +59,3 @@ Predict student scores for seven subjects using Random Forest models. Features a
 - **UI issues**:
   - Ensure CDN access.
   - Check browser console.
-
-## Future Enhancements
-- User authentication.
-- Deployment to Heroku/Netlify.
