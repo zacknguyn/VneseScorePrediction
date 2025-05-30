@@ -1,779 +1,1361 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student Score Predictor</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body class="min-h-screen font-inter transition-colors duration-300">
-  <div id="root"></div>
-  <script type="text/babel">
-    const uniqueValues = {
-      GENDER: ['F', 'M'],
-      RESIDENTIAL_AREA: ['Mountainous', 'Rural', 'Urban'],
-      FATHER_JOB: ['Farmer', 'Military Personnel', 'Government Officer', 'Small Business', 'Worker', 'Teacher', 'Wage earner', 'Driver', 'Hired labor', 'Ngư phủ', 'Freelancer', 'Tailor', 'Employee', 'Police', 'Motorbike mechanic', 'Carpenter', 'Deceased', 'Construction Worker', 'Office Staff', 'Security Guard', 'Photographer', 'Nuôi trồng thủy sản', 'Business', 'CBCC', 'Electrician', 'Government Staff', 'Accountance', 'Công chức', 'Bộ Đội', 'Land Administration Officer', 'Fish Famer', 'Doctor', 'Livestock Farming'],
-      MOTHER_JOB: ['Farmer', 'Government Officer', 'Small Business', 'Teacher', 'Tailor', 'Housewife', 'Medical Staff', 'Freelance', 'Worker', 'Library staff', 'Nail', 'Accountant', 'Office Staff', 'Clerk', 'Government Staff', 'Post Office Staff', 'Nurse', 'Sale', 'Business', 'May', 'Doctor', 'CBVC']
-    };
-
-    function App() {
-      const [formData, setFormData] = React.useState({
-        age: 16,
-        gender: 'F',
-        residentialArea: 'Urban',
-        fatherAge: 45,
-        fatherJob: 'Farmer',
-        motherAge: 43,
-        motherJob: 'Farmer'
-      });
-      const [predictions, setPredictions] = React.useState(null);
-      const [importances, setImportances] = React.useState(null);
-      const [localImportances, setLocalImportances] = React.useState(null);
-      const [batchResults, setBatchResults] = React.useState(null);
-      const [batchCsv, setBatchCsv] = React.useState(null);
-      const [summaryCsv, setSummaryCsv] = React.useState(null);
-      const [error, setError] = React.useState(null);
-      const [loading, setLoading] = React.useState(false);
-      const [activeTab, setActiveTab] = React.useState('single');
-      const [darkMode, setDarkMode] = React.useState(false);
-      const [batchPage, setBatchPage] = React.useState(1);
-      const [rowsPerPage, setRowsPerPage] = React.useState(10);
-      const [sortConfig, setSortConfig] = React.useState({ key: null, direction: 'asc' });
-      const [searchTerm, setSearchTerm] = React.useState('');
-      const barChartRef = React.useRef(null);
-      const radarChartRef = React.useRef(null);
-      const batchChartRef = React.useRef(null);
-
-      const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Score Predictor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="min-h-screen font-inter transition-colors duration-300">
+    <div id="root"></div>
+    <script type="text/babel">
+      const uniqueValues = {
+        GENDER: ["F", "M"],
+        RESIDENTIAL_AREA: ["Mountainous", "Rural", "Urban"],
+        FATHER_JOB: [
+          "Farmer",
+          "Military Personnel",
+          "Government Officer",
+          "Small Business",
+          "Worker",
+          "Teacher",
+          "Wage earner",
+          "Driver",
+          "Hired labor",
+          "Ngư phủ",
+          "Freelancer",
+          "Tailor",
+          "Employee",
+          "Police",
+          "Motorbike mechanic",
+          "Carpenter",
+          "Deceased",
+          "Construction Worker",
+          "Office Staff",
+          "Security Guard",
+          "Photographer",
+          "Nuôi trồng thủy sản",
+          "Business",
+          "CBCC",
+          "Electrician",
+          "Government Staff",
+          "Accountance",
+          "Công chức",
+          "Bộ Đội",
+          "Land Administration Officer",
+          "Fish Famer",
+          "Doctor",
+          "Livestock Farming",
+        ],
+        MOTHER_JOB: [
+          "Farmer",
+          "Government Officer",
+          "Small Business",
+          "Teacher",
+          "Tailor",
+          "Housewife",
+          "Medical Staff",
+          "Freelance",
+          "Worker",
+          "Library staff",
+          "Nail",
+          "Accountant",
+          "Office Staff",
+          "Clerk",
+          "Government Staff",
+          "Post Office Staff",
+          "Nurse",
+          "Sale",
+          "Business",
+          "May",
+          "Doctor",
+          "CBVC",
+        ],
       };
 
-      const validateInputs = () => {
-        if (!formData.age || formData.age < 10 || formData.age > 20) {
-          setError('Student age must be between 10 and 20');
-          return false;
-        }
-        if (!formData.fatherAge || formData.fatherAge < 20 || formData.fatherAge > 80) {
-          setError('Father\'s age must be between 20 and 80');
-          return false;
-        }
-        if (!formData.motherAge || formData.motherAge < 20 || formData.motherAge > 80) {
-          setError('Mother\'s age must be between 20 and 80');
-          return false;
-        }
-        return true;
-      };
-
-      const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
-        setPredictions(null);
-        setImportances(null);
-        setLocalImportances(null);
-        setLoading(true);
-        if (!validateInputs()) {
-          setLoading(false);
-          return;
-        }
-        try {
-          const response = await fetch('http://localhost:5000/predict', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-          });
-          const result = await response.json();
-          if (response.ok) {
-            setPredictions(result.predictions);
-            setImportances(result.importances);
-            setLocalImportances(result.local_importances);
-          } else {
-            setError(result.error || 'Failed to get predictions');
-          }
-        } catch (err) {
-          setError('Error connecting to the server');
-        }
-        setLoading(false);
-      };
-
-      const handleBatchSubmit = async (e) => {
-        e.preventDefault();
-        setError(null);
-        setBatchResults(null);
-        setBatchCsv(null);
-        setSummaryCsv(null);
-        setLoading(true);
-        setBatchPage(1);
-        setSearchTerm('');
-        setSortConfig({ key: null, direction: 'asc' });
-        const file = e.target.files[0];
-        if (!file) {
-          setError('Please select a CSV file');
-          setLoading(false);
-          return;
-        }
-        if (!file.name.endsWith('.csv')) {
-          setError('File must be a CSV');
-          setLoading(false);
-          return;
-        }
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-          const response = await fetch('http://localhost:5000/batch_predict', {
-            method: 'POST',
-            body: formData
-          });
-          const result = await response.json();
-          if (response.ok) {
-            setBatchResults({ headers: result.headers, data: result.data });
-            setBatchCsv(result.results_csv);
-            setSummaryCsv(result.summary_csv);
-          } else {
-            setError(result.error || 'Failed to process batch predictions');
-          }
-        } catch (err) {
-          setError('Error connecting to the server');
-        }
-        setLoading(false);
-      };
-
-      const handleDownload = (csvContent, filename) => {
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      };
-
-      const handleClear = () => {
-        setFormData({
+      function App() {
+        const [formData, setFormData] = React.useState({
           age: 16,
-          gender: 'F',
-          residentialArea: 'Urban',
+          gender: "F",
+          residentialArea: "Urban",
           fatherAge: 45,
-          fatherJob: 'Farmer',
+          fatherJob: "Farmer",
           motherAge: 43,
-          motherJob: 'Farmer'
+          motherJob: "Farmer",
         });
-        setPredictions(null);
-        setImportances(null);
-        setLocalImportances(null);
-        setBatchResults(null);
-        setBatchCsv(null);
-        setSummaryCsv(null);
-        setError(null);
-        setBatchPage(1);
-        setSearchTerm('');
-        setSortConfig({ key: null, direction: 'asc' });
-      };
+        const [predictions, setPredictions] = React.useState(null);
+        const [importances, setImportances] = React.useState(null);
+        const [localImportances, setLocalImportances] = React.useState(null);
+        const [batchResults, setBatchResults] = React.useState(null);
+        const [batchCsv, setBatchCsv] = React.useState(null);
+        const [summaryCsv, setSummaryCsv] = React.useState(null);
+        const [error, setError] = React.useState(null);
+        const [loading, setLoading] = React.useState(false);
+        const [activeTab, setActiveTab] = React.useState("single");
+        const [darkMode, setDarkMode] = React.useState(false);
+        const [batchPage, setBatchPage] = React.useState(1);
+        const [rowsPerPage, setRowsPerPage] = React.useState(10);
+        const [sortConfig, setSortConfig] = React.useState({
+          key: null,
+          direction: "asc",
+        });
+        const [searchTerm, setSearchTerm] = React.useState("");
+        const barChartRef = React.useRef(null);
+        const radarChartRef = React.useRef(null);
+        const batchChartRef = React.useRef(null);
 
-      const formatFeatureName = (feature) => {
-        if (feature.startsWith('GENDER_')) return `Gender: ${feature.replace('GENDER_', '')}`;
-        if (feature.startsWith('RESIDENTIAL_AREA_')) return `Residential Area: ${feature.replace('RESIDENTIAL_AREA_', '')}`;
-        if (feature.startsWith('FATHER_JOB_')) return `Father's Job: ${feature.replace('FATHER_JOB_', '')}`;
-        if (feature.startsWith('MOTHER_JOB_')) return `Mother's Job: ${feature.replace('MOTHER_JOB_', '')}`;
-        if (feature.includes(':')) return feature.split(':')[0].replace('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-        return feature.replace('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-      };
+        const handleChange = (e) => {
+          const { name, value } = e.target;
+          setFormData({ ...formData, [name]: value });
+        };
 
-      const formatHeader = (header) => {
-        return header
-          .toLowerCase()
-          .replace(/_/g, ' ')
-          .replace(/\b(score|ci|feature)\b/g, m => m.toUpperCase())
-          .replace(/\b\w/g, c => c.toUpperCase());
-      };
-
-      const handleSort = (key) => {
-        setSortConfig((prev) => ({
-          key,
-          direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
-        }));
-      };
-
-      const getSortedData = (data) => {
-        if (!sortConfig.key) return data;
-        return [...data].sort((a, b) => {
-          let aValue = a[sortConfig.key];
-          let bValue = b[sortConfig.key];
-          if (sortConfig.key.includes('score') || sortConfig.key.includes('ci') || sortConfig.key.includes('AGE')) {
-            aValue = parseFloat(aValue);
-            bValue = parseFloat(bValue);
+        const validateInputs = () => {
+          if (!formData.age || formData.age < 10 || formData.age > 20) {
+            setError("Student age must be between 10 and 20");
+            return false;
           }
-          if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-          if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-          return 0;
-        });
-      };
+          if (
+            !formData.fatherAge ||
+            formData.fatherAge < 20 ||
+            formData.fatherAge > 80
+          ) {
+            setError("Father's age must be between 20 and 80");
+            return false;
+          }
+          if (
+            !formData.motherAge ||
+            formData.motherAge < 20 ||
+            formData.motherAge > 80
+          ) {
+            setError("Mother's age must be between 20 and 80");
+            return false;
+          }
+          return true;
+        };
 
-      const getFilteredData = (data) => {
-        if (!searchTerm) return data;
-        return data.filter(row =>
-          Object.values(row).some(value =>
-            value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-          )
+        const handleSubmit = async (e) => {
+          e.preventDefault();
+          setError(null);
+          setPredictions(null);
+          setImportances(null);
+          setLocalImportances(null);
+          setLoading(true);
+          if (!validateInputs()) {
+            setLoading(false);
+            return;
+          }
+          try {
+            const response = await fetch("http://localhost:5000/predict", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(formData),
+            });
+            const result = await response.json();
+            if (response.ok) {
+              setPredictions(result.predictions);
+              setImportances(result.importances);
+              setLocalImportances(result.local_importances);
+            } else {
+              setError(result.error || "Failed to get predictions");
+            }
+          } catch (err) {
+            setError("Error connecting to the server");
+          }
+          setLoading(false);
+        };
+
+        const handleBatchSubmit = async (e) => {
+          e.preventDefault();
+          setError(null);
+          setBatchResults(null);
+          setBatchCsv(null);
+          setSummaryCsv(null);
+          setLoading(true);
+          setBatchPage(1);
+          setSearchTerm("");
+          setSortConfig({ key: null, direction: "asc" });
+          const file = e.target.files[0];
+          if (!file) {
+            setError("Please select a CSV file");
+            setLoading(false);
+            return;
+          }
+          if (!file.name.endsWith(".csv")) {
+            setError("File must be a CSV");
+            setLoading(false);
+            return;
+          }
+          const formData = new FormData();
+          formData.append("file", file);
+          try {
+            const response = await fetch(
+              "http://localhost:5000/batch_predict",
+              {
+                method: "POST",
+                body: formData,
+              }
+            );
+            const result = await response.json();
+            if (response.ok) {
+              setBatchResults({ headers: result.headers, data: result.data });
+              setBatchCsv(result.results_csv);
+              setSummaryCsv(result.summary_csv);
+            } else {
+              setError(result.error || "Failed to process batch predictions");
+            }
+          } catch (err) {
+            setError("Error connecting to the server");
+          }
+          setLoading(false);
+        };
+
+        const handleDownload = (csvContent, filename) => {
+          const blob = new Blob([csvContent], { type: "text/csv" });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          a.click();
+          window.URL.revokeObjectURL(url);
+        };
+
+        const handleClear = () => {
+          setFormData({
+            age: 16,
+            gender: "F",
+            residentialArea: "Urban",
+            fatherAge: 45,
+            fatherJob: "Farmer",
+            motherAge: 43,
+            motherJob: "Farmer",
+          });
+          setPredictions(null);
+          setImportances(null);
+          setLocalImportances(null);
+          setBatchResults(null);
+          setBatchCsv(null);
+          setSummaryCsv(null);
+          setError(null);
+          setBatchPage(1);
+          setSearchTerm("");
+          setSortConfig({ key: null, direction: "asc" });
+        };
+
+        const formatFeatureName = (feature) => {
+          if (feature.startsWith("GENDER_"))
+            return `Gender: ${feature.replace("GENDER_", "")}`;
+          if (feature.startsWith("RESIDENTIAL_AREA_"))
+            return `Residential Area: ${feature.replace(
+              "RESIDENTIAL_AREA_",
+              ""
+            )}`;
+          if (feature.startsWith("FATHER_JOB_"))
+            return `Father's Job: ${feature.replace("FATHER_JOB_", "")}`;
+          if (feature.startsWith("MOTHER_JOB_"))
+            return `Mother's Job: ${feature.replace("MOTHER_JOB_", "")}`;
+          if (feature.includes(":"))
+            return feature
+              .split(":")[0]
+              .replace("_", " ")
+              .toLowerCase()
+              .replace(/\b\w/g, (c) => c.toUpperCase());
+          return feature
+            .replace("_", " ")
+            .toLowerCase()
+            .replace(/\b\w/g, (c) => c.toUpperCase());
+        };
+
+        const formatHeader = (header) => {
+          return header
+            .toLowerCase()
+            .replace(/_/g, " ")
+            .replace(/\b(score|ci|feature)\b/g, (m) => m.toUpperCase())
+            .replace(/\b\w/g, (c) => c.toUpperCase());
+        };
+
+        const handleSort = (key) => {
+          setSortConfig((prev) => ({
+            key,
+            direction:
+              prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+          }));
+        };
+
+        const getSortedData = (data) => {
+          if (!sortConfig.key) return data;
+          return [...data].sort((a, b) => {
+            let aValue = a[sortConfig.key];
+            let bValue = b[sortConfig.key];
+            if (
+              sortConfig.key.includes("score") ||
+              sortConfig.key.includes("ci") ||
+              sortConfig.key.includes("AGE")
+            ) {
+              aValue = parseFloat(aValue);
+              bValue = parseFloat(bValue);
+            }
+            if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+            return 0;
+          });
+        };
+
+        const getFilteredData = (data) => {
+          if (!searchTerm) return data;
+          return data.filter((row) =>
+            Object.values(row).some((value) =>
+              value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+            )
+          );
+        };
+
+        React.useEffect(() => {
+          if (predictions && barChartRef.current) {
+            const ctx = barChartRef.current.getContext("2d");
+            const chart = new Chart(ctx, {
+              type: "bar",
+              data: {
+                labels: [
+                  "Chemistry",
+                  "History",
+                  "Literature",
+                  "Biology",
+                  "English",
+                  "Math",
+                  "Physics",
+                ],
+                datasets: [
+                  {
+                    label: "Predicted Scores",
+                    data: Object.values(predictions || {}),
+                    backgroundColor: "rgba(99, 102, 240, 0.6)",
+                    borderColor: darkMode
+                      ? "rgba(99, 102, 240, 1)"
+                      : "rgba(99, 102, 240, 0.1)",
+                    borderWidth: 2,
+                  },
+                ],
+              },
+              options: {
+                animation: { duration: 1000, easing: "easeOutQuart" },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    max: 10,
+                    title: {
+                      display: true,
+                      text: "Score",
+                      font: { size: 14 },
+                      color: darkMode ? "#ffffff" : "#374151",
+                    },
+                    ticks: {
+                      color: darkMode ? "#ffffff" : "#374151",
+                    },
+                    grid: {
+                      color: darkMode
+                        ? "rgba(255,255,255,0.6)"
+                        : "rgba(0, 0, 0, 0.1)",
+                    },
+                  },
+                  x: {
+                    title: {
+                      display: true,
+                      text: "Subject",
+                      font: { size: 14 },
+                      color: darkMode ? "#ffffff" : "#374151",
+                    },
+                    ticks: {
+                      color: darkMode ? "#ffffff" : "#374151",
+                    },
+                    grid: {
+                      color: darkMode
+                        ? "rgba(255,255,255,0.6)"
+                        : "rgba(0, 0, 0, 0.1)",
+                    },
+                  },
+                },
+                plugins: {
+                  legend: { display: false },
+                  title: {
+                    display: true,
+                    text: "Predicted Subject Scores",
+                    font: { size: 18, weight: "600" },
+                    color: darkMode ? "#ffffff" : "#374151",
+                  },
+                },
+              },
+            });
+            return () => chart.destroy();
+          }
+        }, [predictions, darkMode]);
+
+        React.useEffect(() => {
+          if (predictions && radarChartRef.current) {
+            const ctx = radarChartRef.current.getContext("2d");
+            const chart = new Chart(ctx, {
+              type: "radar",
+              data: {
+                labels: [
+                  "Chemistry",
+                  "History",
+                  "Literature",
+                  "Biology",
+                  "English",
+                  "Math",
+                  "Physics",
+                ],
+                datasets: [
+                  {
+                    label: "Predicted Scores",
+                    data: Object.values(predictions || {}),
+                    backgroundColor: darkMode 
+                      ? "rgba(147, 197, 253, 0.3)" // Light blue with transparency for dark mode
+                      : "rgba(99, 99, 241, 0.2)",
+                    borderColor: darkMode 
+                      ? "rgba(255, 255, 255, 0.9)" // White border for dark mode
+                      : "rgba(99, 102, 241, 1)",
+                    borderWidth: 2,
+                    pointBackgroundColor: darkMode 
+                      ? "rgba(255, 255, 255, 1)" // White points for dark mode
+                      : "rgba(99, 102, 241, 1)",
+                    pointBorderColor: darkMode 
+                      ? "rgba(255, 255, 255, 1)" 
+                      : "rgba(99, 102, 241, 1)",
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                  },
+                ],
+              },
+              options: {
+                animation: { duration: 1000 },
+                scales: {
+                  r: {
+                    beginAtZero: true,
+                    max: 10,
+                    ticks: { 
+                      stepSize: 2, 
+                      font: { size: 12 },
+                      color: darkMode ? "#ffffff" : "#374151",
+                      backdropColor: darkMode ? "rgba(0, 0, 0, 0.7)" : "rgba(255, 255, 255, 0.8)",
+                    },
+                    pointLabels: { 
+                      font: { size: 12, weight: "500" },
+                      color: darkMode ? "#ffffff" : "#374151",
+                    },
+                    grid: {
+                      color: darkMode ? "rgba(255, 255, 255, 0.3)" : "rgba(0, 0, 0, 0.1)",
+                    },
+                    angleLines: {
+                      color: darkMode ? "rgba(255, 255, 255, 0.3)" : "rgba(0, 0, 0, 0.1)",
+                    },
+                  },
+                },
+                plugins: {
+                  legend: { display: false },
+                  title: {
+                    display: true,
+                    text: "Score Distribution",
+                    font: { size: 18, weight: "600" },
+                    color: darkMode ? "#ffffff" : "#374151",
+                  },
+                },
+              },
+            });
+            return () => chart.destroy();
+          }
+        }, [predictions, darkMode]);
+
+        React.useEffect(() => {
+          if (batchResults && batchChartRef.current) {
+            const subjects = [
+              "chemistry",
+              "history",
+              "literature",
+              "biology",
+              "english",
+              "math",
+              "physics",
+            ];
+            const meanScores = subjects.map((subject) => {
+              const scores = batchResults.data
+                .map((row) => parseFloat(row[`${subject}_score`]))
+                .filter((score) => !isNaN(score));
+              return scores.length
+                ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+                : 0;
+            });
+            const ctx = batchChartRef.current.getContext("2d");
+            const chart = new Chart(ctx, {
+              type: "bar",
+              data: {
+                labels: subjects.map(
+                  (s) => s.charAt(0).toUpperCase() + s.slice(1)
+                ),
+                datasets: [
+                  {
+                    label: "Average Scores",
+                    data: meanScores,
+                    backgroundColor: "rgba(99, 102, 241, 0.6)",
+                    borderColor: "rgba(99, 102, 241, 1)",
+                    borderWidth: 1,
+                  },
+                ],
+              },
+              options: {
+                animation: { duration: 1000, easing: "easeOutQuart" },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    max: 10,
+                    title: {
+                      display: true,
+                      text: "Average Score",
+                      font: { size: 14 },
+                    },
+                  },
+                  x: {
+                    title: {
+                      display: true,
+                      text: "Subject",
+                      font: { size: 14 },
+                    },
+                  },
+                },
+                plugins: {
+                  legend: { display: false },
+                  title: {
+                    display: true,
+                    text: "Average Scores Across Students",
+                    font: { size: 18, weight: "600" },
+                  },
+                },
+              },
+            });
+            return () => chart.destroy();
+          }
+        }, [batchResults]);
+
+        let filteredBatchData = batchResults
+          ? getFilteredData(getSortedData(batchResults.data))
+          : [];
+        const totalBatchPages = Math.ceil(
+          filteredBatchData.length / rowsPerPage
         );
-      };
+        const paginatedBatchData = filteredBatchData.slice(
+          (batchPage - 1) * rowsPerPage,
+          batchPage * rowsPerPage
+        );
 
-      React.useEffect(() => {
-        if (predictions && barChartRef.current) {
-          const ctx = barChartRef.current.getContext('2d');
-          const chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-              labels: ['Chemistry', 'History', 'Literature', 'Biology', 'English', 'Math', 'Physics'],
-              datasets: [{
-                label: 'Predicted Scores',
-                data: Object.values(predictions || {}),
-                backgroundColor: 'rgba(99, 102, 241, 0.6)',
-                borderColor: 'rgba(99, 102, 241, 1)',
-                borderWidth: 1
-              }]
-            },
-            options: {
-              animation: { duration: 1000, easing: 'easeOutQuart' },
-              scales: {
-                y: { beginAtZero: true, max: 10, title: { display: true, text: 'Score', font: { size: 14 } } },
-                x: { title: { display: true, text: 'Subject', font: { size: 14 } } }
-              },
-              plugins: {
-                legend: { display: false },
-                title: { display: true, text: 'Predicted Subject Scores', font: { size: 18, weight: '600' } }
-              }
-            }
-          });
-          return () => chart.destroy();
-        }
-      }, [predictions]);
-
-      React.useEffect(() => {
-        if (predictions && radarChartRef.current) {
-          const ctx = radarChartRef.current.getContext('2d');
-          const chart = new Chart(ctx, {
-            type: 'radar',
-            data: {
-              labels: ['Chemistry', 'History', 'Literature', 'Biology', 'English', 'Math', 'Physics'],
-              datasets: [{
-                label: 'Predicted Scores',
-                data: Object.values(predictions || {}),
-                backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                borderColor: 'rgba(99, 102, 241, 1)',
-                borderWidth: 2
-              }]
-            },
-            options: {
-              animation: { duration: 1000 },
-              scales: {
-                r: {
-                  beginAtZero: true,
-                  max: 10,
-                  ticks: { stepSize: 2, font: { size: 12 } },
-                  pointLabels: { font: { size: 12 } }
-                }
-              },
-              plugins: {
-                legend: { display: false },
-                title: { display: true, text: 'Score Distribution', font: { size: 18, weight: '600' } }
-              }
-            }
-          });
-          return () => chart.destroy();
-        }
-      }, [predictions]);
-
-      React.useEffect(() => {
-        if (batchResults && batchChartRef.current) {
-          const subjects = ['chemistry', 'history', 'literature', 'biology', 'english', 'math', 'physics'];
-          const meanScores = subjects.map(subject => {
-            const scores = batchResults.data.map(row => parseFloat(row[`${subject}_score`])).filter(score => !isNaN(score));
-            return scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
-          });
-          const ctx = batchChartRef.current.getContext('2d');
-          const chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-              labels: subjects.map(s => s.charAt(0).toUpperCase() + s.slice(1)),
-              datasets: [{
-                label: 'Average Scores',
-                data: meanScores,
-                backgroundColor: 'rgba(99, 102, 241, 0.6)',
-                borderColor: 'rgba(99, 102, 241, 1)',
-                borderWidth: 1
-              }]
-            },
-            options: {
-              animation: { duration: 1000, easing: 'easeOutQuart' },
-              scales: {
-                y: { beginAtZero: true, max: 10, title: { display: true, text: 'Average Score', font: { size: 14 } } },
-                x: { title: { display: true, text: 'Subject', font: { size: 14 } } }
-              },
-              plugins: {
-                legend: { display: false },
-                title: { display: true, text: 'Average Scores Across Students', font: { size: 18, weight: '600' } }
-              }
-            }
-          });
-          return () => chart.destroy();
-        }
-      }, [batchResults]);
-
-      let filteredBatchData = batchResults ? getFilteredData(getSortedData(batchResults.data)) : [];
-      const totalBatchPages = Math.ceil(filteredBatchData.length / rowsPerPage);
-      const paginatedBatchData = filteredBatchData.slice((batchPage - 1) * rowsPerPage, batchPage * rowsPerPage);
-
-      return (
-        <div className={`min-h-screen flex ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} transition-colors duration-500`}>
-          <aside className={`fixed top-0 left-0 h-full w-64 ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg z-30 transition-all duration-300`}>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold tracking-tight">Score Predictor</h1>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">AI-Driven Insights</p>
-            </div>
-            <nav className="mt-4">
-              <button
-                onClick={() => setActiveTab('single')}
-                className={`w-full text-left py-3 px-6 text-sm font-medium ${activeTab === 'single' ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'} transition-all`}
-              >
-                Single Prediction
-              </button>
-              <button
-                onClick={() => setActiveTab('batch')}
-                className={`w-full text-left py-3 px-6 text-sm font-medium ${activeTab === 'batch' ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'} transition-all`}
-              >
-                Batch Prediction
-              </button>
-            </nav>
-            <div className="absolute bottom-6 left-6">
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
-              >
-                {darkMode ? '☀️' : '🌙'}
-              </button>
-            </div>
-          </aside>
-          <main className="flex-1 ml-64 p-8 overflow-y-auto">
-            <div className="max-w-5xl mx-auto space-y-8">
-              <div className={`p-6 rounded-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md transition-all duration-500`}>
-                {activeTab === 'single' ? (
-                  <div>
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-semibold">Enter Student Details</h2>
-                      <button
-                        onClick={handleClear}
-                        className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-all"
-                      >
-                        Clear All
-                      </button>
-                    </div>
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Student Age</label>
-                        <input
-                          type="number"
-                          name="age"
-                          value={formData.age}
-                          onChange={handleChange}
-                          min="10"
-                          max="20"
-                          className={`mt-1 block w-full p-3 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'} focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Gender</label>
-                        <select
-                          name="gender"
-                          value={formData.gender}
-                          onChange={handleChange}
-                          className={`mt-1 block w-full p-3 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'} focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
-                        >
-                          {uniqueValues.GENDER.map((option) => (
-                            <option key={option} value={option}>{option}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Residential Area</label>
-                        <select
-                          name="residentialArea"
-                          value={formData.residentialArea}
-                          onChange={handleChange}
-                          className={`mt-1 block w-full p-3 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'} focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
-                        >
-                          {uniqueValues.RESIDENTIAL_AREA.map((option) => (
-                            <option key={option} value={option}>{option}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Father's Age</label>
-                        <input
-                          type="number"
-                          name="fatherAge"
-                          value={formData.fatherAge}
-                          onChange={handleChange}
-                          min="20"
-                          max="80"
-                          className={`mt-1 block w-full p-3 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'} focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Father's Job</label>
-                        <select
-                          name="fatherJob"
-                          value={formData.fatherJob}
-                          onChange={handleChange}
-                          className={`mt-1 block w-full p-3 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'} focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
-                        >
-                          {uniqueValues.FATHER_JOB.map((option) => (
-                            <option key={option} value={option}>{option}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mother's Age</label>
-                        <input
-                          type="number"
-                          name="motherAge"
-                          value={formData.motherAge}
-                          onChange={handleChange}
-                          min="20"
-                          max="80"
-                          className={`mt-1 block w-full p-3 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'} focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mother's Job</label>
-                        <select
-                          name="motherJob"
-                          value={formData.motherJob}
-                          onChange={handleChange}
-                          className={`mt-1 block w-full p-3 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'} focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
-                        >
-                          {uniqueValues.MOTHER_JOB.map((option) => (
-                            <option key={option} value={option}>{option}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="md:col-span-2">
-                        <button
-                          type="submit"
-                          disabled={loading}
-                          className={`w-full py-3 px-6 rounded-lg font-semibold text-white ${loading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} transition-all duration-300`}
-                        >
-                          {loading ? 'Predicting...' : 'Predict Scores'}
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-semibold">Upload Batch Data</h2>
-                      <button
-                        onClick={handleClear}
-                        className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-all"
-                      >
-                        Clear All
-                      </button>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Upload a CSV file with student data (see <a href="/backend/batch_template.csv" className="text-indigo-600 hover:underline">template</a>).</p>
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={handleBatchSubmit}
-                      className={`block w-full p-3 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'} focus:ring-2 focus:ring-indigo-500 transition-all`}
-                    />
-                  </div>
-                )}
+        return (
+          <div
+            className={`min-h-screen flex ${
+              darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"
+            } transition-colors duration-500`}
+          >
+            <aside
+              className={`fixed top-0 left-0 h-full w-64 ${
+                darkMode ? "bg-gray-800" : "bg-white"
+              } shadow-lg z-30 transition-all duration-300`}
+            >
+              <div className="p-6">
+                <h1 className="text-2xl font-bold tracking-tight">
+                  Score Predictor
+                </h1>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  AI-Driven Insights
+                </p>
               </div>
-              {loading && (
-                <div className="flex justify-center">
-                  <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              )}
-              {error && (
-                <div className={`p-6 rounded-2xl ${darkMode ? 'bg-red-950' : 'bg-red-50'} shadow-md animate-fade-in`}>
-                  <h2 className="text-lg font-semibold text-red-600 dark:text-red-300">Error: {error}</h2>
-                </div>
-              )}
-              {predictions && activeTab === 'single' && (
-                <div className={`p-6 rounded-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md animate-fade-in`}>
-                  <h2 className="text-xl font-semibold mb-4">Predicted Scores</h2>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div><canvas id="barChart" ref={barChartRef}></canvas></div>
-                    <div><canvas id="radarChart" ref={radarChartRef}></canvas></div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="bg-indigo-50 dark:bg-indigo-900">
-                          <th className="p-3 text-sm font-semibold text-left">Subject</th>
-                          <th className="p-3 text-sm font-semibold text-left">Score</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(predictions).map(([subject, score]) => (
-                          <tr key={subject} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            <td className="p-3 text-sm capitalize">{subject}</td>
-                            <td className="p-3 text-sm">{score.toFixed(1)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-              {localImportances && activeTab === 'single' && (
-                <div className={`p-6 rounded-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md animate-fade-in`}>
-                  <h2 className="text-xl font-semibold mb-4">Local Feature Contributions</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">How each feature impacts the predicted score for this student (positive increases score, negative decreases).</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {Object.entries(localImportances).map(([subject, contribs]) => (
-                      <div key={subject} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'} shadow-sm`}>
-                        <h3 className="text-lg font-medium capitalize mb-2">{subject}</h3>
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="bg-gray-100 dark:bg-gray-600">
-                              <th className="p-2 text-sm font-semibold text-left">Feature</th>
-                              <th className="p-2 text-sm font-semibold text-left">Contribution</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {contribs.map(({ feature, contribution }) => (
-                              <tr key={feature} className="hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                                <td className="p-2 text-sm relative group">
-                                  {formatFeatureName(feature)}
-                                  <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded p-2 -mt-10 ml-2 z-10">
-                                    {contribution > 0 ? 'Increases score' : 'Decreases score'}
-                                  </span>
-                                </td>
-                                <td className={`p-2 text-sm ${contribution > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                  {contribution.toFixed(2)}
-                                </td>
-                              </tr>
+              <nav className="mt-4">
+                <button
+                  onClick={() => setActiveTab("single")}
+                  className={`w-full text-left py-3 px-6 text-sm font-medium ${
+                    activeTab === "single"
+                      ? "bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  } transition-all`}
+                >
+                  Single Prediction
+                </button>
+                <button
+                  onClick={() => setActiveTab("batch")}
+                  className={`w-full text-left py-3 px-6 text-sm font-medium ${
+                    activeTab === "batch"
+                      ? "bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  } transition-all`}
+                >
+                  Batch Prediction
+                </button>
+              </nav>
+              <div className="absolute bottom-6 left-6">
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+                >
+                  {darkMode ? "☀️" : "🌙"}
+                </button>
+              </div>
+            </aside>
+            <main className="flex-1 ml-64 p-8 overflow-y-auto">
+              <div className="max-w-5xl mx-auto space-y-8">
+                <div
+                  className={`p-6 rounded-2xl ${
+                    darkMode ? "bg-gray-800" : "bg-white"
+                  } shadow-md transition-all duration-500`}
+                >
+                  {activeTab === "single" ? (
+                    <div>
+                      <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-semibold">
+                          Enter Student Details
+                        </h2>
+                        <button
+                          onClick={handleClear}
+                          className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-all"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                      <form
+                        onSubmit={handleSubmit}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                      >
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Student Age
+                          </label>
+                          <input
+                            type="number"
+                            name="age"
+                            value={formData.age}
+                            onChange={handleChange}
+                            min="10"
+                            max="20"
+                            className={`mt-1 block w-full p-3 rounded-lg border ${
+                              darkMode
+                                ? "bg-gray-700 border-gray-600 text-white"
+                                : "bg-gray-50 border-gray-300"
+                            } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Gender
+                          </label>
+                          <select
+                            name="gender"
+                            value={formData.gender}
+                            onChange={handleChange}
+                            className={`mt-1 block w-full p-3 rounded-lg border ${
+                              darkMode
+                                ? "bg-gray-700 border-gray-600 text-white"
+                                : "bg-gray-50 border-gray-300"
+                            } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
+                          >
+                            {uniqueValues.GENDER.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
                             ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {importances && activeTab === 'single' && (
-                <div className={`p-6 rounded-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md animate-fade-in`}>
-                  <h2 className="text-xl font-semibold mb-4">Global Feature Importances</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Overall importance of features across all predictions.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {Object.entries(importances).map(([subject, imp]) => (
-                      <div key={subject} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'} shadow-sm`}>
-                        <h3 className="text-lg font-medium capitalize mb-2">{subject}</h3>
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="bg-gray-100 dark:bg-gray-600">
-                              <th className="p-2 text-sm font-semibold text-left">Feature</th>
-                              <th className="p-2 text-sm font-semibold text-left">Importance</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {Object.entries(imp)
-                              .sort((a, b) => b[1] - a[1])
-                              .slice(0, 5)
-                              .map(([feature, value]) => (
-                                <tr key={feature} className="hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                                  <td className="p-2 text-sm">{formatFeatureName(feature)}</td>
-                                  <td className="p-2 text-sm">{(value * 100).toFixed(2)}%</td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {batchResults && activeTab === 'batch' && (
-                <>
-                  <div className={`p-6 rounded-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md animate-fade-in`}>
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-xl font-semibold">Batch Prediction Results</h2>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleDownload(batchCsv, 'batch_predictions.csv')}
-                          disabled={loading || !batchCsv}
-                          className={`flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-white ${loading || !batchCsv ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} transition-all`}
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                          Results
-                        </button>
-                        <button
-                          onClick={() => handleDownload(summaryCsv, 'batch_summary.csv')}
-                          disabled={loading || !summaryCsv}
-                          className={`flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-white ${loading || !summaryCsv ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-600 hover:bg-gray-700'} transition-all`}
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                          Summary
-                        </button>
-                      </div>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Residential Area
+                          </label>
+                          <select
+                            name="residentialArea"
+                            value={formData.residentialArea}
+                            onChange={handleChange}
+                            className={`mt-1 block w-full p-3 rounded-lg border ${
+                              darkMode
+                                ? "bg-gray-700 border-gray-600 text-white"
+                                : "bg-gray-50 border-gray-300"
+                            } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
+                          >
+                            {uniqueValues.RESIDENTIAL_AREA.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Father's Age
+                          </label>
+                          <input
+                            type="number"
+                            name="fatherAge"
+                            value={formData.fatherAge}
+                            onChange={handleChange}
+                            min="20"
+                            max="80"
+                            className={`mt-1 block w-full p-3 rounded-lg border ${
+                              darkMode
+                                ? "bg-gray-700 border-gray-600 text-white"
+                                : "bg-gray-50 border-gray-300"
+                            } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Father's Job
+                          </label>
+                          <select
+                            name="fatherJob"
+                            value={formData.fatherJob}
+                            onChange={handleChange}
+                            className={`mt-1 block w-full p-3 rounded-lg border ${
+                              darkMode
+                                ? "bg-gray-700 border-gray-600 text-white"
+                                : "bg-gray-50 border-gray-300"
+                            } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
+                          >
+                            {uniqueValues.FATHER_JOB.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Mother's Age
+                          </label>
+                          <input
+                            type="number"
+                            name="motherAge"
+                            value={formData.motherAge}
+                            onChange={handleChange}
+                            min="20"
+                            max="80"
+                            className={`mt-1 block w-full p-3 rounded-lg border ${
+                              darkMode
+                                ? "bg-gray-700 border-gray-600 text-white"
+                                : "bg-gray-50 border-gray-300"
+                            } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Mother's Job
+                          </label>
+                          <select
+                            name="motherJob"
+                            value={formData.motherJob}
+                            onChange={handleChange}
+                            className={`mt-1 block w-full p-3 rounded-lg border ${
+                              darkMode
+                                ? "bg-gray-700 border-gray-600 text-white"
+                                : "bg-gray-50 border-gray-300"
+                            } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all`}
+                          >
+                            {uniqueValues.MOTHER_JOB.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <button
+                            type="submit"
+                            disabled={loading}
+                            className={`w-full py-3 px-6 rounded-lg font-semibold text-white ${
+                              loading
+                                ? "bg-indigo-400 cursor-not-allowed"
+                                : "bg-indigo-600 hover:bg-indigo-700"
+                            } transition-all duration-300`}
+                          >
+                            {loading ? "Predicting..." : "Predict Scores"}
+                          </button>
+                        </div>
+                      </form>
                     </div>
-                    <div className="mb-4">
-                      <canvas id="batchChart" ref={batchChartRef}></canvas>
-                    </div>
-                    <div className="flex justify-between items-center mb-4">
+                  ) : (
+                    <div>
+                      <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-semibold">
+                          Upload Batch Data
+                        </h2>
+                        <button
+                          onClick={handleClear}
+                          className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-all"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Upload a CSV file with student data (see{" "}
+                        <a
+                          href="/backend/batch_template.csv"
+                          className="text-indigo-600 hover:underline"
+                        >
+                          template
+                        </a>
+                        ).
+                      </p>
                       <input
-                        type="text"
-                        placeholder="Search students..."
-                        value={searchTerm}
-                        onChange={(e) => { setSearchTerm(e.target.value); setBatchPage(1); }}
-                        className={`p-2 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'} focus:ring-2 focus:ring-indigo-500 w-64`}
+                        type="file"
+                        accept=".csv"
+                        onChange={handleBatchSubmit}
+                        className={`block w-full p-3 rounded-lg border ${
+                          darkMode
+                            ? "bg-gray-700 border-gray-600 text-white"
+                            : "bg-gray-50 border-gray-300"
+                        } focus:ring-2 focus:ring-indigo-500 transition-all`}
                       />
-                      <div className="flex items-center space-x-2">
-                        <label className="text-sm">Rows per page:</label>
-                        <select
-                          value={rowsPerPage}
-                          onChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setBatchPage(1); }}
-                          className={`p-2 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-300'}`}
-                        >
-                          {[5, 10, 20, 50].map(num => (
-                            <option key={num} value={num}>{num}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    {paginatedBatchData.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="bg-indigo-50 dark:bg-indigo-900 sticky top-0">
-                              {batchResults.headers.map((header) => (
-                                <th
-                                  key={header}
-                                  className="p-3 text-sm font-semibold text-left cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-800"
-                                  onClick={() => handleSort(header)}
-                                >
-                                  <div className="flex items-center">
-                                    {formatHeader(header)}
-                                    {sortConfig.key === header && (
-                                      <svg className={`w-4 h-4 ml-1 ${sortConfig.direction === 'asc' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                      </svg>
-                                    )}
-                                  </div>
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {paginatedBatchData.map((row, i) => (
-                              <tr key={i} className={`border-b ${i % 2 === 0 ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800'} hover:bg-indigo-50 dark:hover:bg-indigo-900 transition-colors`}>
-                                {batchResults.headers.map((header) => (
-                                  <td key={header} className="p-3 text-sm">
-                                    {header.includes('top_feature') ? formatFeatureName(row[header]) : row[header]}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">No results found for "{searchTerm}".</p>
-                    )}
-                    {totalBatchPages > 1 && (
-                      <div className="flex justify-between items-center mt-4">
-                        <div className="flex space-x-1">
-                          {[1, 2, 3, 4, 5].filter(page => page <= totalBatchPages).map(page => (
-                            <button
-                              key={page}
-                              onClick={() => setBatchPage(page)}
-                              className={`px-3 py-1 rounded-lg text-sm ${batchPage === page ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'} transition-all`}
-                            >
-                              {page}
-                            </button>
-                          ))}
-                          {totalBatchPages > 5 && (
-                            <span className="px-3 py-1 text-sm">...</span>
-                          )}
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => setBatchPage(p => Math.max(1, p - 1))}
-                            disabled={batchPage === 1}
-                            className={`px-4 py-2 rounded-lg text-sm ${batchPage === 1 ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'} transition-all`}
-                          >
-                            Previous
-                          </button>
-                          <button
-                            onClick={() => setBatchPage(p => Math.min(totalBatchPages, p + 1))}
-                            disabled={batchPage === totalBatchPages}
-                            className={`px-4 py-2 rounded-lg text-sm ${batchPage === totalBatchPages ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'} transition-all`}
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {summaryCsv && (
-                    <div className={`p-6 rounded-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md animate-fade-in`}>
-                      <h2 className="text-xl font-semibold mb-4">Batch Summary</h2>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Key statistics for the batch predictions.</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {summaryCsv.trim().split('\n').slice(1).map((row, i) => {
-                          const [metric, value] = row.split(',');
-                          const isScore = metric.toLowerCase().includes('score');
-                          const isMin = metric.toLowerCase().includes('min');
-                          const isMax = metric.toLowerCase().includes('max');
-                          const numericValue = parseFloat(value);
-                          const colorClass = isScore ? (
-                            isMin ? 'text-red-600 dark:text-red-400' :
-                            isMax ? 'text-green-600 dark:text-green-400' :
-                            'text-blue-600 dark:text-blue-400'
-                          ) : 'text-gray-800 dark:text-gray-200';
-                          return (
-                            <div key={i} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'} shadow-sm relative group`}>
-                              <div className="flex items-center">
-                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{metric}</span>
-                                <span className="ml-1 text-xs hidden group-hover:block bg-gray-800 text-white rounded p-1">Metric</span>
-                              </div>
-                              <p className={`text-lg font-semibold ${colorClass}`}>
-                                {isScore ? numericValue.toFixed(2) : value}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
                     </div>
                   )}
-                </>
-              )}
-            </div>
-          </main>
-        </div>
-      );
-    }
+                </div>
+                {loading && (
+                  <div className="flex justify-center">
+                    <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+                {error && (
+                  <div
+                    className={`p-6 rounded-2xl ${
+                      darkMode ? "bg-red-950" : "bg-red-50"
+                    } shadow-md animate-fade-in`}
+                  >
+                    <h2 className="text-lg font-semibold text-red-600 dark:text-red-300">
+                      Error: {error}
+                    </h2>
+                  </div>
+                )}
+                {predictions && activeTab === "single" && (
+                  <div
+                    className={`p-6 rounded-2xl ${
+                      darkMode ? "bg-gray-800" : "bg-white"
+                    } shadow-md animate-fade-in`}
+                  >
+                    <h2 className="text-xl font-semibold mb-4">
+                      Predicted Scores
+                    </h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                      <div>
+                        <canvas id="barChart" ref={barChartRef}></canvas>
+                      </div>
+                      <div>
+                        <canvas id="radarChart" ref={radarChartRef}></canvas>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-indigo-50 dark:bg-indigo-900">
+                            <th className="p-3 text-sm font-semibold text-left text-white">
+                              Subject
+                            </th>
+                            <th className="p-3 text-sm font-semibold text-left text-white">
+                              Score
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(predictions).map(
+                            ([subject, score]) => (
+                              <tr
+                                key={subject}
+                                className="hover:shadow-lg hover:shadow-gray-200/50 dark:hover:bg-gray-800/30 dark:hover:shadow-[0_0_15px_rgba(99,102,241,0.15)] transition-all duration-300 cursor-pointer group rounded-lg"
+                              >
+                                <td className="p-3 text-sm capitalize ">
+                                  {subject}
+                                </td>
+                                <td className="p-3 text-sm">
+                                  {score.toFixed(1)}
+                                </td>
+                              </tr>
+                            )
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                {localImportances && activeTab === "single" && (
+                  <div
+                    className={`p-6 rounded-2xl ${
+                      darkMode ? "bg-gray-800" : "bg-white"
+                    } shadow-md animate-fade-in`}
+                  >
+                    <h2 className="text-xl font-semibold mb-4">
+                      Local Feature Contributions
+                    </h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      How each feature impacts the predicted score for this
+                      student (positive increases score, negative decreases).
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {Object.entries(localImportances).map(
+                        ([subject, contribs]) => (
+                          <div
+                            key={subject}
+                            className={`p-4 rounded-lg ${
+                              darkMode ? "bg-gray-700" : "bg-gray-100"
+                            } shadow-sm`}
+                          >
+                            <h3 className="text-lg text font-medium capitalize mb-2">
+                              {subject}
+                            </h3>
+                            <table className="w-full border-collapse">
+                              <thead>
+                                <tr className="bg-gray-100 dark:bg-gray-600">
+                                  <th className="p-2 text-sm font-semibold text-left text-white">
+                                    Feature
+                                  </th>
+                                  <th className="p-2 text-sm font-semibold text-left text-white">
+                                    Contribution
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {contribs.map(({ feature, contribution }) => (
+                                  <tr
+                                    key={feature}
+                                    className="
+                                    dark:hover:bg-gray-300 transition-colors 
+                                    dark:hover:text-gray-800"
+                                  >
+                                    <td className="p-2 text-sm relative group">
+                                      {formatFeatureName(feature)}
+                                      <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded p-2 -mt-10 ml-2 z-10">
+                                        {contribution > 0
+                                          ? "Increases score"
+                                          : "Decreases score"}
+                                      </span>
+                                    </td>
+                                    <td
+                                      className={`p-2 text-sm ${
+                                        contribution > 0
+                                          ? "text-green-600 dark:text-green-400"
+                                          : "text-red-600 dark:text-red-400"
+                                      }`}
+                                    >
+                                      {contribution.toFixed(2)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+                {importances && activeTab === "single" && (
+                  <div
+                    className={`p-6 rounded-2xl ${
+                      darkMode ? "bg-gray-800" : "bg-white"
+                    } shadow-md animate-fade-in`}
+                  >
+                    <h2 className="text-xl font-semibold mb-4">
+                      Global Feature Importances
+                    </h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Overall importance of features across all predictions.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {Object.entries(importances).map(([subject, imp]) => (
+                        <div
+                          key={subject}
+                          className={`p-4 rounded-lg ${
+                            darkMode ? "bg-gray-700" : "bg-gray-50"
+                          } shadow-sm`}
+                        >
+                          <h3 className="text-lg font-medium capitalize mb-2">
+                            {subject}
+                          </h3>
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr className="bg-gray-100 dark:bg-gray-600">
+                                <th className="p-2 text-sm font-semibold text-left text-white">
+                                  Feature
+                                </th>
+                                <th className="p-2 text-sm font-semibold text-left text-white">
+                                  Importance
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Object.entries(imp)
+                                .sort((a, b) => b[1] - a[1])
+                                .slice(0, 5)
+                                .map(([feature, value]) => (
+                                  <tr
+                                    key={feature}
+                                    className="hover:bg-gray-200 dark:hover:bg-gray-300 transition-colors
+                                    dark:hover:text-gray-800"
+                                  >
+                                    <td className="p-2 text-sm">
+                                      {formatFeatureName(feature)}
+                                    </td>
+                                    <td className="p-2 text-sm">
+                                      {(value * 100).toFixed(2)}%
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {batchResults && activeTab === "batch" && (
+                  <>
+                    <div
+                      className={`p-6 rounded-2xl ${
+                        darkMode ? "bg-gray-800" : "bg-white"
+                      } shadow-md animate-fade-in`}
+                    >
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold">
+                          Batch Prediction Results
+                        </h2>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() =>
+                              handleDownload(batchCsv, "batch_predictions.csv")
+                            }
+                            disabled={loading || !batchCsv}
+                            className={`flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-white ${
+                              loading || !batchCsv
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-indigo-600 hover:bg-indigo-700"
+                            } transition-all`}
+                          >
+                            <svg
+                              className="w-4 h-4 mr-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                              ></path>
+                            </svg>
+                            Results
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleDownload(summaryCsv, "batch_summary.csv")
+                            }
+                            disabled={loading || !summaryCsv}
+                            className={`flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-white ${
+                              loading || !summaryCsv
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-gray-600 hover:bg-gray-700"
+                            } transition-all`}
+                          >
+                            <svg
+                              className="w-4 h-4 mr-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                              ></path>
+                            </svg>
+                            Summary
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mb-4">
+                        <canvas id="batchChart" ref={batchChartRef}></canvas>
+                      </div>
+                      <div className="flex justify-between items-center mb-4">
+                        <input
+                          type="text"
+                          placeholder="Search students..."
+                          value={searchTerm}
+                          onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setBatchPage(1);
+                          }}
+                          className={`p-2 rounded-lg border ${
+                            darkMode
+                              ? "bg-gray-700 border-gray-600 text-white"
+                              : "bg-gray-50 border-gray-300"
+                          } focus:ring-2 focus:ring-indigo-500 w-64`}
+                        />
+                        <div className="flex items-center space-x-2">
+                          <label className="text-sm">Rows per page:</label>
+                          <select
+                            value={rowsPerPage}
+                            onChange={(e) => {
+                              setRowsPerPage(parseInt(e.target.value));
+                              setBatchPage(1);
+                            }}
+                            className={`p-2 rounded-lg border ${
+                              darkMode
+                                ? "bg-gray-700 border-gray-600 text-white"
+                                : "bg-gray-50 border-gray-300"
+                            }`}
+                          >
+                            {[5, 10, 20, 50].map((num) => (
+                              <option key={num} value={num}>
+                                {num}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      {paginatedBatchData.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse shadow-lg rounded-lg overflow-hidden">
+                            <thead>
+                              <tr className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700">
+                                {batchResults.headers.map((header) => (
+                                  <th
+                                    key={header}
+                                    className="p-4 text-sm font-bold text-white cursor-pointer hover:bg-indigo-700 dark:hover:bg-indigo-800 transition-all duration-200 border-r border-indigo-500 last:border-r-0"
+                                    onClick={() => handleSort(header)}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-left">{formatHeader(header)}</span>
+                                      {sortConfig.key === header && (
+                                        <svg
+                                          className={`w-4 h-4 ml-2 text-white ${
+                                            sortConfig.direction === "asc" ? "rotate-180" : ""
+                                          }`}
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M19 9l-7 7-7-7"
+                                          />
+                                        </svg>
+                                      )}
+                                    </div>
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {paginatedBatchData.map((row, i) => (
+                                <tr
+                                  key={i}
+                                  className={`border-b border-gray-200 dark:border-gray-700 transition-all duration-200 bg-gray-600`}
+                                >
+                                  {batchResults.headers.map((header, idx) => {
+                                    const cellValue = header.includes("top_feature")
+                                      ? formatFeatureName(row[header])
+                                      : row[header];
+                                    
+                                    // Color coding for score columns
+                                    const isScoreColumn = header.includes("score");
+                                    const numericValue = parseFloat(cellValue);
+                                    
+                                    let cellColorClass = "text-gray-900 dark:text-gray-100";
+                                    if (isScoreColumn && !isNaN(numericValue)) {
+                                      if (numericValue >= 8) {
+                                        cellColorClass = "text-green-700 dark:text-green-400 font-semibold";
+                                      } else if (numericValue >= 6) {
+                                        cellColorClass = "text-yellow-700 dark:text-yellow-400 font-semibold";
+                                      } else {
+                                        cellColorClass = "text-red-700 dark:text-red-400 font-semibold";
+                                      }
+                                    }
+                                    
+                                    return (
+                                      <td 
+                                        key={header} 
+                                        className={`p-4 text-sm border-r border-gray-200 dark:border-gray-600 last:border-r-0 ${cellColorClass}`}
+                                      >
+                                        {isScoreColumn && !isNaN(numericValue) ? (
+                                          <div className="flex items-center">
+                                            <span className="mr-2">{cellValue}</span>
+                                            <div className={`w-2 h-2 rounded-full ${
+                                              numericValue >= 8 ? 'bg-green-500' : 
+                                              numericValue >= 6 ? 'bg-yellow-500' : 'bg-red-500'
+                                            }`}></div>
+                                          </div>
+                                        ) : (
+                                          cellValue
+                                        )}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-lg text-gray-600 dark:text-gray-400">
+                            No results found for "{searchTerm}".
+                          </p>
+                        </div>
+                      )}
+                      {totalBatchPages > 1 && (
+                        <div className="flex justify-between items-center mt-4">
+                          <div className="flex space-x-1">
+                            {[1, 2, 3, 4, 5]
+                              .filter((page) => page <= totalBatchPages)
+                              .map((page) => (
+                                <button
+                                  key={page}
+                                  onClick={() => setBatchPage(page)}
+                                  className={`px-3 py-1 rounded-lg text-sm ${
+                                    batchPage === page
+                                      ? "bg-indigo-600 text-white"
+                                      : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                  } transition-all`}
+                                >
+                                  {page}
+                                </button>
+                              ))}
+                            {totalBatchPages > 5 && (
+                              <span className="px-3 py-1 text-sm">...</span>
+                            )}
+                          </div>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() =>
+                                setBatchPage((p) => Math.max(1, p - 1))
+                              }
+                              disabled={batchPage === 1}
+                              className={`px-4 py-2 rounded-lg text-sm ${
+                                batchPage === 1
+                                  ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
+                                  : "bg-indigo-600 text-white hover:bg-indigo-700"
+                              } transition-all`}
+                            >
+                              Previous
+                            </button>
+                            <button
+                              onClick={() =>
+                                setBatchPage((p) =>
+                                  Math.min(totalBatchPages, p + 1)
+                                )
+                              }
+                              disabled={batchPage === totalBatchPages}
+                              className={`px-4 py-2 rounded-lg text-sm ${
+                                batchPage === totalBatchPages
+                                  ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
+                                  : "bg-indigo-600 text-white hover:bg-indigo-700"
+                              } transition-all`}
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {summaryCsv && (
+                      <div
+                        className={`p-6 rounded-2xl ${
+                          darkMode ? "bg-gray-800" : "bg-white"
+                        } shadow-md animate-fade-in`}
+                      >
+                        <h2 className="text-xl font-semibold mb-4">
+                          Batch Summary
+                        </h2>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                          Key statistics for the batch predictions.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {summaryCsv
+                            .trim()
+                            .split("\n")
+                            .slice(1)
+                            .map((row, i) => {
+                              const [metric, value] = row.split(",");
+                              const isScore = metric
+                                .toLowerCase()
+                                .includes("score");
+                              const isMin = metric
+                                .toLowerCase()
+                                .includes("min");
+                              const isMax = metric
+                                .toLowerCase()
+                                .includes("max");
+                              const numericValue = parseFloat(value);
+                              const colorClass = isScore
+                                ? isMin
+                                  ? "text-red-600 dark:text-red-400"
+                                  : isMax
+                                  ? "text-green-600 dark:text-green-400"
+                                  : "text-blue-600 dark:text-blue-400"
+                                : "text-gray-800 dark:text-gray-200";
+                              return (
+                                <div
+                                  key={i}
+                                  className={`p-4 rounded-lg ${
+                                    darkMode ? "bg-gray-700" : "bg-gray-50"
+                                  } shadow-sm relative group`}
+                                >
+                                  <div className="flex items-center">
+                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                      {metric}
+                                    </span>
+                                    <span className="ml-1 text-xs hidden group-hover:block bg-gray-800 text-white rounded p-1">
+                                      Metric
+                                    </span>
+                                  </div>
+                                  <p
+                                    className={`text-lg font-semibold ${colorClass}`}
+                                  >
+                                    {isScore ? numericValue.toFixed(2) : value}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </main>
+          </div>
+        );
+      }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
-  <style>
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-slide-in {
-      animation: slideIn 0.5s ease-out;
-    }
-    .font-inter {
-      font-family: 'Inter', sans-serif;
-    }
-  </style>
-</body>
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+    <style>
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-slide-in {
+        animation: slideIn 0.5s ease-out;
+      }
+      .font-inter {
+        font-family: "Inter", sans-serif;
+      }
+    </style>
+  </body>
 </html>
